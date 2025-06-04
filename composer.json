@@ -1,0 +1,13 @@
+{
+    "name": "stronghold/bench",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "Stronghold\\Bench\\": "src/"
+        }
+    },
+    "require": {
+        "php": "^8.2",
+        "symfony/console": "^7.3"
+    }
+}
