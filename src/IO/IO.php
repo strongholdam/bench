@@ -1,10 +1,10 @@
 <?php
 
-namespace Stronghold\Bench;
+namespace Stronghold\Bench\IO;
 
-use DateTime;
-use DateInterval;
+use Stronghold\Bench\Utils\Utils;
 use Symfony\Component\Console\Output\OutputInterface;
+
 use const FILE_SIZE_MB;
 
 /**
@@ -18,16 +18,6 @@ use const FILE_SIZE_MB;
  */
 class IO
 {
-    /**
-     * Start time of the benchmark
-     */
-    private DateTime $start;
-
-    /**
-     * End time of the benchmark
-     */
-    private DateTime $end;
-
     /**
      * Path to the temporary file
      */
@@ -65,8 +55,6 @@ class IO
      */
     public function run(): array
     {
-        // Start timing the entire benchmark
-        $this->start = new DateTime();
         $this->output->writeln("Starting I/O benchmark test...");
 
         // Create a temporary file for testing
@@ -83,36 +71,23 @@ class IO
         unlink($this->tempFile);
         $this->output->writeln("Removed temporary test file.");
 
-        // Calculate total time
-        $this->end = new DateTime();
-        $diff = $this->end->diff($this->start);
-        $totalSeconds = Utils::calculateSeconds($diff);
-
         // Display summary
         $this->output->writeln('');
-        $this->output->writeln(sprintf('Total I/O benchmark took %s.', Utils::formatTime($diff)));
-
-        // Calculate combined I/O speed (write once, read multiple times)
-        $totalMB = FILE_SIZE_MB + (FILE_SIZE_MB * $readResults['iterations']);
-        $combinedSpeed = $totalMB / $totalSeconds;
 
         // Summary of both read and write performance
         $this->output->writeln("I/O Performance Summary:");
         $this->output->writeln(sprintf('- Write speed: %s', Utils::formatSpeed(FILE_SIZE_MB, $writeResults['seconds'])));
-        $this->output->writeln(sprintf(
+        $this->output->writeln(
+            sprintf(
                 '- Read speed: %s (over %d iterations)',
                 Utils::formatSpeed(FILE_SIZE_MB * $readResults['iterations'], $readResults['seconds']),
                 $readResults['iterations']
-            ));
-        $this->output->writeln(sprintf('- Combined I/O speed: %s', Utils::formatSpeed($totalMB, $totalSeconds)));
-        $this->output->writeln(sprintf('This calculation took %s.', Utils::formatTime($diff)));
+            )
+        );
 
         return [
             'write_results' => $writeResults,
             'read_results' => $readResults,
-            'total_seconds' => $totalSeconds,
-            'combined_speed' => $combinedSpeed,
-            'time_diff' => $diff,
         ];
     }
 }

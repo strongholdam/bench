@@ -1,6 +1,6 @@
 <?php
 
-namespace Stronghold\Bench;
+namespace Stronghold\Bench\Utils;
 
 use DateInterval;
 

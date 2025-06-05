@@ -1,10 +1,10 @@
 <?php
 
-namespace Stronghold\Bench;
+namespace Stronghold\Bench\CPU;
 
-use DateTime;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Output\OutputInterface;
+
 use const MAX_NUMBERS_TO_CALCULATE;
 
 /**
@@ -26,24 +26,14 @@ class CPU
     private int $current = 1;
 
     /**
-     * Start time of the benchmark
+     * Progress bar for displaying progress
      */
-    private DateTime $start;
-
-    /**
-     * End time of the benchmark
-     */
-    private ?DateTime $end = null;
+    private ?ProgressBar $progressBar = null;
 
     /**
      * Output interface for console output
      */
     private OutputInterface $output;
-
-    /**
-     * Progress bar for displaying progress
-     */
-    private ?ProgressBar $progressBar = null;
 
     /**
      * Constructor
@@ -84,9 +74,6 @@ class CPU
      */
     public function run(): array
     {
-        // Record the start time of the benchmark
-        $this->start = new DateTime();
-
         // Initialize the progress bar
         $this->progressBar = new ProgressBar($this->output, MAX_NUMBERS_TO_CALCULATE);
         $this->progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory:6s%');
@@ -109,24 +96,16 @@ class CPU
         $this->progressBar->finish();
         $this->output->writeln('');
 
-        // Record the end time of the benchmark
-        $this->end = new DateTime();
-
-        // Calculate the time difference
-        $diff = $this->end->diff($this->start);
-
         // Add some spacing for better readability
         $this->output->writeln('');
 
         // Display the benchmark results
         $this->output->writeln(sprintf('Found %d number primes.', count($this->primes)));
         $this->output->writeln(sprintf('Last number prime found was %d.', end($this->primes)));
-        $this->output->writeln(sprintf('This calculation take %02d:%02d:%02d.', $diff->h, $diff->i, $diff->s));
 
         return [
             'primes_count' => count($this->primes),
             'last_prime' => end($this->primes),
-            'time_diff' => $diff,
         ];
     }
 }

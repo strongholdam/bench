@@ -4,11 +4,11 @@ namespace Stronghold\Bench\Command;
 
 require_once __DIR__.'/../../src/config/config.php';
 
+use Stronghold\Bench\IO\IO;
+use Stronghold\Bench\Tracker\TimeTracker;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Helper\ProgressBar;
-use Stronghold\Bench\IO;
 
 class IOBenchmarkCommand extends Command
 {
@@ -30,8 +30,13 @@ class IOBenchmarkCommand extends Command
         // Create a new IO benchmark instance with the output interface
         $ioBenchmark = new IO($output);
 
-        // Run the benchmark
-        $results = $ioBenchmark->run();
+        // Create a new execution time tracker
+        $timeTracker = new TimeTracker($output);
+
+        // Run the benchmark and track execution time
+        $results = $timeTracker->trackExecutionTime(self::$defaultName, function () use ($ioBenchmark) {
+            return $ioBenchmark->run();
+        });
 
         // Return success
         return Command::SUCCESS;

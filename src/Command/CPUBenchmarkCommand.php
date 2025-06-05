@@ -4,11 +4,11 @@ namespace Stronghold\Bench\Command;
 
 require_once __DIR__.'/../../src/config/config.php';
 
+use Stronghold\Bench\CPU\CPU;
+use Stronghold\Bench\Tracker\TimeTracker;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Helper\ProgressBar;
-use Stronghold\Bench\CPU;
 
 class CPUBenchmarkCommand extends Command
 {
@@ -30,8 +30,13 @@ class CPUBenchmarkCommand extends Command
         // Create a new CPU benchmark instance with the output interface
         $cpuBenchmark = new CPU($output);
 
-        // Run the benchmark
-        $results = $cpuBenchmark->run();
+        // Create a new execution time tracker
+        $timeTracker = new TimeTracker($output);
+
+        // Run the benchmark and track execution time
+        $results = $timeTracker->trackExecutionTime(self::$defaultName, function () use ($cpuBenchmark) {
+            return $cpuBenchmark->run();
+        });
 
         // Return success
         return Command::SUCCESS;

@@ -1,10 +1,12 @@
 <?php
 
-namespace Stronghold\Bench;
+namespace Stronghold\Bench\IO;
 
 use DateTime;
-use Symfony\Component\Console\Output\OutputInterface;
+use Stronghold\Bench\Utils\Utils;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Output\OutputInterface;
+
 use const CHUNK_SIZE;
 use const FILE_SIZE_MB;
 use const READ_ITERATIONS;
