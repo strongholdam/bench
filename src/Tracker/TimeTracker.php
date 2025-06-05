@@ -7,6 +7,8 @@ use DateTime;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Output\OutputInterface;
 
+use function sprintf;
+
 /**
  * Execution Time Tracker Class
  *
@@ -15,75 +17,94 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 class TimeTracker
 {
-    /**
-     * Path to the file where execution times are stored
-     */
     private string $dataFile;
 
-    /**
-     * Output interface for console output
-     */
     private OutputInterface $output;
 
-    /**
-     * Constructor
-     */
     public function __construct(OutputInterface $output, string $dataFile = null)
     {
         $this->output = $output;
         $this->dataFile = $dataFile ?? __DIR__.'/../../data/execution_times.csv';
 
-        // Ensure the data directory exists
         $dataDir = dirname($this->dataFile);
         if (!is_dir($dataDir)) {
             mkdir($dataDir, 0755, true);
         }
 
-        // Create the data file if it doesn't exist
         if (!file_exists($this->dataFile)) {
             file_put_contents($this->dataFile, "date,command,execution_time_seconds\n");
         }
     }
 
-    /**
-     * Track execution time for a command
-     *
-     * @param string $commandName The name of the command
-     * @param callable $callback The command to execute
-     * @return mixed The result of the command
-     */
-    public function trackExecutionTime(string $commandName, callable $callback)
+    public function trackExecutionTime(string $commandName, callable $callback): mixed
     {
-        // Record the start time
         $start = new DateTime();
-
-        // Execute the command
         $result = $callback();
-
-        // Record the end time
         $end = new DateTime();
-
-        // Calculate the time difference in seconds
         $diff = $end->diff($start);
         $seconds = $diff->s + ($diff->i * 60) + ($diff->h * 3600);
-
-        // Save the execution time to the file
         $this->saveExecutionTime($commandName, $start, $seconds);
-
-        // Display current execution time
         $this->displayCurrentExecutionTime($seconds);
-
-        // Display statistics
         $this->displayStatistics($commandName);
 
         return $result;
     }
 
-    /**
-     * Display the current execution time
-     *
-     * @param float $seconds The execution time in seconds
-     */
+    protected function calculateStatisticsForAllTimes(array $executionTimes): void
+    {
+        if (empty($executionTimes)) {
+            return;
+        }
+        $statistics = $this->calculateStatistics($executionTimes);
+        $this->output->writeln(['', 'All-time statistics:']);
+        $this->table($statistics);
+    }
+
+    protected function calculateStatisticsForLast30Days(array $executionTimes): void
+    {
+        $last30DaysDate = new DateTime();
+        $last30DaysDate->sub(new DateInterval('P30D'));
+        $executionTimes = array_filter($executionTimes, function ($item) use ($last30DaysDate) {
+            return $item['date'] >= $last30DaysDate;
+        });
+
+        if (empty($executionTimes)) {
+            return;
+        }
+        $statistics = $this->calculateStatistics($executionTimes);
+        $this->output->writeln(['', 'Last 30 days statistics:']);
+        $this->table($statistics);
+    }
+
+    private function calculateStatisticsForLast24Hours(array $executionTimes): void
+    {
+        $last24HoursDate = new DateTime();
+        $last24HoursDate->sub(new DateInterval('PT24H'));
+        $executionTimes = array_filter($executionTimes, function ($item) use ($last24HoursDate) {
+            return $item['date'] >= $last24HoursDate;
+        });
+
+        if (empty($executionTimes)) {
+            return;
+        }
+        $statistics = $this->calculateStatistics($executionTimes);
+        $this->output->writeln(['', 'Last 24 hours statistics:']);
+        $this->table($statistics);
+    }
+
+    private function table($statistics): void
+    {
+        $last24HoursTable = new Table($this->output);
+        $last24HoursTable->setHeaders(['Metric', 'Value (seconds)']);
+        $last24HoursTable->addRows([
+            ['Best time', sprintf('%.2f', $statistics['best'])],
+            ['Worst time', sprintf('%.2f', $statistics['worst'])],
+            ['Average time', sprintf('%.2f', $statistics['average'])],
+            ['Count', number_format($statistics['count'])],
+        ]);
+        $last24HoursTable->render();
+    }
+
     private function displayCurrentExecutionTime(float $seconds): void
     {
         $this->output->writeln('');
@@ -108,81 +129,24 @@ class TimeTracker
             'best' => min($seconds),
             'worst' => max($seconds),
             'average' => array_sum($seconds) / count($seconds),
+            'count' => count($executionTimes),
         ];
     }
 
-    /**
-     * Display statistics about execution times
-     *
-     * @param string $commandName The name of the command
-     */
     private function displayStatistics(string $commandName): void
     {
-        $this->output->writeln('');
-        $this->output->writeln('Execution Time Statistics:');
-
         // Get all execution times for this command
         $executionTimes = $this->getExecutionTimes($commandName);
-
         if (empty($executionTimes)) {
             $this->output->writeln('No previous execution times found for this command.');
 
             return;
         }
-
-        // Create a table for all time statistics
-        $allTimeStats = $this->calculateStatistics($executionTimes);
-        $this->output->writeln('All-time statistics:');
-        $allTimeTable = new Table($this->output);
-        $allTimeTable->setHeaders(['Metric', 'Value (seconds)']);
-        $allTimeTable->addRow(['Best time', sprintf('%.2f', $allTimeStats['best'])]);
-        $allTimeTable->addRow(['Worst time', sprintf('%.2f', $allTimeStats['worst'])]);
-        $allTimeTable->addRow(['Average time', sprintf('%.2f', $allTimeStats['average'])]);
-        $allTimeTable->render();
-
-        // Calculate statistics for last 30 days
-        $last30DaysDate = new DateTime();
-        $last30DaysDate->sub(new DateInterval('P30D'));
-        $last14DaysExecutionTimes = array_filter($executionTimes, function ($item) use ($last30DaysDate) {
-            return $item['date'] >= $last30DaysDate;
-        });
-
-        if (!empty($last14DaysExecutionTimes)) {
-            $last14DaysStats = $this->calculateStatistics($last14DaysExecutionTimes);
-            $this->output->writeln('Last 30 days statistics:');
-            $last30DaysTable = new Table($this->output);
-            $last30DaysTable->setHeaders(['Metric', 'Value (seconds)']);
-            $last30DaysTable->addRow(['Best time', sprintf('%.2f', $last14DaysStats['best'])]);
-            $last30DaysTable->addRow(['Worst time', sprintf('%.2f', $last14DaysStats['worst'])]);
-            $last30DaysTable->addRow(['Average time', sprintf('%.2f', $last14DaysStats['average'])]);
-            $last30DaysTable->render();
-        }
-
-        // Calculate statistics for last 24 hours
-        $last24HoursDate = new DateTime();
-        $last24HoursDate->sub(new DateInterval('PT24H'));
-        $last24HoursExecutionTimes = array_filter($executionTimes, function ($item) use ($last24HoursDate) {
-            return $item['date'] >= $last24HoursDate;
-        });
-
-        if (!empty($last24HoursExecutionTimes)) {
-            $last24HoursStats = $this->calculateStatistics($last24HoursExecutionTimes);
-            $this->output->writeln('Last 24 hours statistics:');
-            $last24HoursTable = new Table($this->output);
-            $last24HoursTable->setHeaders(['Metric', 'Value (seconds)']);
-            $last24HoursTable->addRow(['Best time', sprintf('%.2f', $last24HoursStats['best'])]);
-            $last24HoursTable->addRow(['Worst time', sprintf('%.2f', $last24HoursStats['worst'])]);
-            $last24HoursTable->addRow(['Average time', sprintf('%.2f', $last24HoursStats['average'])]);
-            $last24HoursTable->render();
-        }
+        $this->calculateStatisticsForLast24Hours($executionTimes);
+        $this->calculateStatisticsForLast30Days($executionTimes);
+        $this->calculateStatisticsForAllTimes($executionTimes);
     }
 
-    /**
-     * Get all execution times for a command
-     *
-     * @param string $commandName The name of the command
-     * @return array<array<string, mixed>> Array of execution times
-     */
     private function getExecutionTimes(string $commandName): array
     {
         $executionTimes = [];
