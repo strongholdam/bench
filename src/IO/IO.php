@@ -4,7 +4,6 @@ namespace Stronghold\Bench\IO;
 
 use Stronghold\Bench\Utils\Utils;
 use Symfony\Component\Console\Output\OutputInterface;
-
 use const FILE_SIZE_MB;
 
 /**
@@ -58,7 +57,7 @@ class IO
         $this->output->writeln("Starting I/O benchmark test...");
 
         // Create a temporary file for testing
-        $this->tempFile = tempnam(sys_get_temp_dir(), 'io_benchmark');
+        $this->tempFile = sprintf('%s/io_benchmark_file', sys_get_temp_dir());
         $this->output->writeln("Created temporary test file: {$this->tempFile}");
 
         // Perform write test
