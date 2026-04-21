@@ -2,7 +2,6 @@
 
 namespace Stronghold\Bench\CPU;
 
-use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use const MAX_NUMBERS_TO_CALCULATE;
@@ -24,11 +23,6 @@ class CPU
      * Current number being checked
      */
     private int $current = 1;
-
-    /**
-     * Progress bar for displaying progress
-     */
-    private ?ProgressBar $progressBar = null;
 
     /**
      * Output interface for console output
@@ -74,29 +68,18 @@ class CPU
      */
     public function run(): array
     {
-        // Initialize the progress bar
-        $this->progressBar = new ProgressBar($this->output, MAX_NUMBERS_TO_CALCULATE);
-        $this->progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory:6s%');
-        $this->progressBar->start();
-
-        // Check each number up to the maximum
+        $lastDot = microtime(true);
         while ($this->current < MAX_NUMBERS_TO_CALCULATE) {
-            // If the number is prime, add it to the array
             if ($this->isPrime($this->current)) {
                 $this->primes[] = $this->current;
             }
-
-            // Update the progress bar
-            $this->progressBar->advance();
-
+            if (microtime(true) - $lastDot >= 4.5) {
+                $this->output->write('.');
+                $lastDot = microtime(true);
+            }
             ++$this->current;
         }
 
-        // Finish the progress bar
-        $this->progressBar->finish();
-        $this->output->writeln('');
-
-        // Add some spacing for better readability
         $this->output->writeln('');
 
         // Display the benchmark results

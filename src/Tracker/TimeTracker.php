@@ -24,15 +24,11 @@ class TimeTracker
     public function __construct(OutputInterface $output, string $dataFile = null)
     {
         $this->output = $output;
-        $this->dataFile = $dataFile ?? __DIR__.'/../../data/execution_times.csv';
+        $this->dataFile = $dataFile ?? __DIR__.'/../../data/bench.execution_times.jsonl';
 
         $dataDir = dirname($this->dataFile);
         if (!is_dir($dataDir)) {
             mkdir($dataDir, 0755, true);
-        }
-
-        if (!file_exists($this->dataFile)) {
-            file_put_contents($this->dataFile, "date,command,execution_time_seconds\n");
         }
     }
 
@@ -155,21 +151,17 @@ class TimeTracker
             return $executionTimes;
         }
 
-        $file = fopen($this->dataFile, 'r');
+        $lines = file($this->dataFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-        // Skip the header row
-        fgetcsv($file);
-
-        while (($row = fgetcsv($file)) !== false) {
-            if (count($row) >= 3 && $row[1] === $commandName) {
+        foreach ($lines as $line) {
+            $row = json_decode($line, true);
+            if ($row && $row['command'] === $commandName) {
                 $executionTimes[] = [
-                    'date' => new DateTime($row[0]),
-                    'seconds' => (float) $row[2],
+                    'date' => new DateTime($row['date']),
+                    'seconds' => (float) $row['execution_time_seconds'],
                 ];
             }
         }
-
-        fclose($file);
 
         return $executionTimes;
     }
@@ -183,7 +175,11 @@ class TimeTracker
      */
     private function saveExecutionTime(string $commandName, DateTime $date, float $seconds): void
     {
-        $data = sprintf("%s,%s,%.2f\n", $date->format('Y-m-d H:i:s'), $commandName, $seconds);
+        $data = json_encode([
+            'date' => $date->format('Y-m-d H:i:s'),
+            'command' => $commandName,
+            'execution_time_seconds' => round($seconds, 2),
+        ]) . "\n";
         file_put_contents($this->dataFile, $data, FILE_APPEND);
     }
 }

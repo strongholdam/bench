@@ -4,7 +4,6 @@ namespace Stronghold\Bench\IO;
 
 use DateTime;
 use Stronghold\Bench\Utils\Utils;
-use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use const CHUNK_SIZE;
@@ -51,22 +50,15 @@ class Read
             $bytesRead = 0;
             $readHandle = fopen($tempFile, 'r');
 
-            // Initialize progress bar
-            $progressBar = new ProgressBar($this->output, $fileSize);
-            $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory:6s%');
-            $progressBar->setRedrawFrequency(max(1, $fileSize / 100)); // Update every 1% progress
-            $progressBar->start();
-
+            $lastDot = microtime(true);
             while (!feof($readHandle)) {
                 $chunk = fread($readHandle, CHUNK_SIZE);
                 $bytesRead += strlen($chunk);
-
-                // Update progress bar
-                $progressBar->setProgress(min($bytesRead, $fileSize));
+                if (microtime(true) - $lastDot >= 4.5) {
+                    $this->output->write('.');
+                    $lastDot = microtime(true);
+                }
             }
-
-            // Finish progress bar
-            $progressBar->finish();
             $this->output->writeln('');
 
             fclose($readHandle);

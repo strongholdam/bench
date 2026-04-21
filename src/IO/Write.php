@@ -4,7 +4,6 @@ namespace Stronghold\Bench\IO;
 
 use DateTime;
 use Stronghold\Bench\Utils\Utils;
-use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use const CHUNK_SIZE;
@@ -43,24 +42,17 @@ class Write
         $bytesWritten = 0;
         $writeHandle = fopen($tempFile, 'w');
 
-        $data = str_repeat('A', CHUNK_SIZE); // Create a chunk of data to write
+        $data = str_repeat('A', CHUNK_SIZE);
 
-        // Initialize progress bar
-        $progressBar = new ProgressBar($this->output, $bytesToWrite);
-        $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory:6s%');
-        $progressBar->setRedrawFrequency(max(1, $bytesToWrite / 100)); // Update every 1% progress
-        $progressBar->start();
-
+        $lastDot = microtime(true);
         while ($bytesWritten < $bytesToWrite) {
             $written = fwrite($writeHandle, $data);
             $bytesWritten += $written;
-
-            // Update progress bar
-            $progressBar->setProgress($bytesWritten);
+            if (microtime(true) - $lastDot >= 4.5) {
+                $this->output->write('.');
+                $lastDot = microtime(true);
+            }
         }
-
-        // Finish progress bar
-        $progressBar->finish();
         $this->output->writeln('');
 
         fclose($writeHandle);
