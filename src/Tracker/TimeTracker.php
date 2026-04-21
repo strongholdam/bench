@@ -35,10 +35,9 @@ class TimeTracker
     public function trackExecutionTime(string $commandName, callable $callback): mixed
     {
         $start = new DateTime();
+        $startFloat = microtime(true);
         $result = $callback();
-        $end = new DateTime();
-        $diff = $end->diff($start);
-        $seconds = $diff->s + ($diff->i * 60) + ($diff->h * 3600);
+        $seconds = round(microtime(true) - $startFloat, 2);
         $this->saveExecutionTime($commandName, $start, $seconds);
         $this->displayCurrentExecutionTime($seconds);
         $this->displayStatistics($commandName);
